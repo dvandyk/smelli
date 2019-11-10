@@ -11,6 +11,7 @@ from collections import OrderedDict
 from math import ceil
 from .util import tree, get_datapath
 from . import ckm
+from .unbinned import UnbinnedParameterLikelihood
 from multipledispatch import dispatch
 from copy import copy
 import os
@@ -62,6 +63,10 @@ class GlobalLikelihood(object):
         'likelihood_bqnunu.yaml',
         'likelihood_lfv.yaml',
         'likelihood_zlfv.yaml',
+    ]
+
+    _unbinned_likelihoods_yaml = [
+        'unbinned_likelihood_flavio_test.yaml'
     ]
 
     def __init__(self, eft='SMEFT', basis=None,
@@ -124,6 +129,7 @@ class GlobalLikelihood(object):
         self.fix_ckm = fix_ckm
         self.likelihoods = {}
         self.fast_likelihoods = {}
+        self.unbinned_likelihoods = {}
         self._custom_likelihoods_dict = custom_likelihoods or {}
         self.custom_likelihoods = {}
         self._load_likelihoods(include_likelihoods=include_likelihoods,
@@ -172,6 +178,12 @@ class GlobalLikelihood(object):
             with open(self._get_likelihood_path(fn), 'r') as f:
                 L = Likelihood.load(f)
             self.likelihoods[fn] = L
+        for fn in self._unbinned_likelihoods_yaml:
+            if include_likelihoods is not None and fn not in include_likelihoods:
+                continue
+            with open(self._get_likelihood_path(fn), 'r') as f:
+                L = UnbinnedParameterLikelihood.load(f)
+            self.unbinned_likelihoods[fn] = L
         for name, observables in self._custom_likelihoods_dict.items():
             L = CustomLikelihood(self, observables)
             self.custom_likelihoods['custom_' + name] = L
@@ -335,6 +347,8 @@ class GlobalLikelihood(object):
             ll[name] = lh.log_likelihood(par_dict, w, delta=True)
         for name, clh in self.custom_likelihoods.items():
             ll[name] = clh.log_likelihood(par_dict, w, delta=True)
+        for name, ulh in self.unbinned_likelihoods.items():
+            ll[name] = ulh.log_likelihood(w)
         return ll
 
     @dispatch(dict)
