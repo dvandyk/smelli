@@ -69,3 +69,7 @@ class TestGlobalLikelihoodPoint(unittest.TestCase):
         res = gl.parameter_point({}, 91.1876)
         pval = res.pvalue_dict()
         self.assertTrue(0 < pval['global'] < 1)
+
+    def test_unbinned(self):
+        gl = GlobalLikelihood(include_likelihoods='unbinned_likelihood_flavio_test')
+        self.assertIsInstance(res, GlobalLikelihoodPoint)
