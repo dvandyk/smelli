@@ -1,6 +1,9 @@
+from collections import OrderedDict
 from flavio.io import instanceio as iio
 import numpy as np
 import yaml
+from .util import get_cachepath
+from requests import get
 
 class UnbinnedParameterLikelihood(iio.YAMLLoadable):
     """An `UnbinnedParameterLikelihood` provides an unbinned likelihood function in terms of
@@ -76,3 +79,41 @@ class UnbinnedParameterLikelihood(iio.YAMLLoadable):
         # remove NoneTypes and empty lists
         d = {k: v for k, v in d.items() if v is not None}
         return d
+
+class DataSets(iio.YAMLLoadable):
+    """`DataSets` provides an interface to the list of data sets used for unbinned likelihood functions.
+    Methods:
+    - `log_likelihood`: The likelihood as a function of the parameters
+    Instances can be imported and exported from/to YAML using the `load`
+    and `dump` methods.
+    """
+    _input_schema_dict = {
+        'datasets': OrderedDict,
+    }
+
+    _output_schema_dict = {
+        'datasets': OrderedDict,
+    }
+
+    def __init__(self, datasets):
+        self.datasets = datasets
+
+    @classmethod
+    def load(cls, f, **kwargs):
+        """Instantiate an object from a YAML string or stream."""
+        d = yaml.load(f, Loader=yaml.Loader)
+        return cls.load_dict(d, **kwargs)
+
+    def download(self, dn):
+        if dn not in self.datasets.keys():
+            raise ValueError('unknown dataset {}'.format(dn))
+
+        destdir = os.path.join(get_cachepath, dn)
+        if not os.path.exists(destdir):
+            os.makedirs(destdir)
+
+        for url in self.datasets[dn].urls:
+            fn = os.path.join(destdir, url[url.rfind('/') + 1:])
+            content = get(url).content
+            with open(fn, 'w+') as f:
+                write(f, content)
